@@ -1,9 +1,9 @@
 package miniplc0java.analyser;
 
-import miniplc0java.AbstractTree.BooleanTree;
-import miniplc0java.AbstractTree.ConditionTree;
-import miniplc0java.AbstractTree.OperatorTree;
-import miniplc0java.AbstractTree.WhileTree;
+import miniplc0java.ast.BooleanTree;
+import miniplc0java.ast.ConditionTree;
+import miniplc0java.ast.OperatorTree;
+import miniplc0java.ast.WhileTree;
 import miniplc0java.FunctionTable;
 import miniplc0java.Table;
 import miniplc0java.error.AnalyzeError;
@@ -87,12 +87,12 @@ public final class Analyser {
 
     private boolean checkBinaryOperator() throws TokenizeError {
         var token = peek();
-        var tokentype=token.getTokenType();
+        var tokenType=token.getTokenType();
         return 
-        tokentype==TokenType.PLUS||
-        tokentype==TokenType.MINUS||
-        tokentype==TokenType.MUL||
-        tokentype==TokenType.DIV;//||;
+            tokenType==TokenType.PLUS||
+            tokenType==TokenType.MINUS||
+            tokenType==TokenType.MUL||
+            tokenType==TokenType.DIV;//||;
    /*     tokentype==TokenType.EQ||
         tokentype==TokenType.NEQ||
         tokentype==TokenType.LT||
@@ -134,8 +134,8 @@ public final class Analyser {
 
     private Token expectTy() throws CompileError {
         var token = peek();
-        var tokentype=token.getTokenType();
-        if ( tokentype== TokenType.INT_KW) {
+        var tokenType=token.getTokenType();
+        if ( tokenType== TokenType.INT_KW) {
             return next();
         } else {
             throw new ExpectedTokenError(List.of(TokenType.INT_KW), next());
@@ -154,10 +154,10 @@ public final class Analyser {
     private Token expectLiteral() throws CompileError {
         var token = peek();
         var tokentype=token.getTokenType();
-        if ( tokentype== TokenType.UNIT_LITERAL||tokentype==TokenType.STRING_LITERAL) {
+        if ( tokentype== TokenType.UINT_LITERAL||tokentype==TokenType.STRING_LITERAL) {
             return next();
         } else {
-            throw new ExpectedTokenError(List.of(TokenType.UNIT_LITERAL, TokenType.STRING_LITERAL), next());
+            throw new ExpectedTokenError(List.of(TokenType.UINT_LITERAL, TokenType.STRING_LITERAL), next());
         }
     }
 
@@ -178,11 +178,11 @@ public final class Analyser {
         if(symbolEntry==null)
             throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
         Long off=symbolEntry.getOff();
-        if(symbolEntry.getNametype()==NameType.Proc)
+        if(symbolEntry.getNameType()==NameType.Proc)
             throw new AnalyzeError(ErrorCode.CantGetProcAddress, curPos);
-        else if(symbolEntry.getNametype()==NameType.Params){
+        else if(symbolEntry.getNameType()==NameType.Params){
             return new Instruction(Operation.arga,off);
-        }else if(symbolEntry.getNametype()==NameType.Var) {
+        }else if(symbolEntry.getNameType()==NameType.Var) {
             if(symbolEntry.getDeep()==1)
                 return new Instruction(Operation.globa,off);
             else
@@ -191,7 +191,7 @@ public final class Analyser {
             throw new AnalyzeError(ErrorCode.ExpectNameToken, curPos);
     }
 
-    private Instruction getStirngAddress(Token token) throws AnalyzeError {
+    private Instruction getStringAddress(Token token) throws AnalyzeError {
         this.table.addGlobal(token);
         return new Instruction(Operation.push,this.table.getGlobalId(token));
     }
@@ -225,7 +225,7 @@ public final class Analyser {
         var entry = this.table.get(name,this.deep,token.getStartPos());
         if (entry == null) {
             throw new AnalyzeError(ErrorCode.NotDeclared, curPos);
-        }else if(entry.getNametype()==NameType.Proc){
+        }else if(entry.getNameType()==NameType.Proc){
             throw new AnalyzeError(ErrorCode.AssignedToFunction, curPos);
         }else if(entry.isConstant()){
             throw new AnalyzeError(ErrorCode.AssignToConstant, curPos);
@@ -271,7 +271,7 @@ public final class Analyser {
         }
     }
 
-    private void expcetNotConstant(Token token) throws AnalyzeError {
+    private void expectNotConstant(Token token) throws AnalyzeError {
         String name=token.getValueString();
         Pos curPos=token.getStartPos();
         var entry = this.table.get(name,this.deep,curPos);
@@ -307,7 +307,7 @@ public final class Analyser {
      */
     //
     private void analyseProgram() throws CompileError {
-        while(check(TokenType.EOF)==false){
+        while(!check(TokenType.EOF)){
             if(check(TokenType.FN_KW)){
                 analyseFunction();
             }else if(check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
@@ -318,14 +318,14 @@ public final class Analyser {
         }
         expect(TokenType.EOF);
     }
-//
+
     private void analyseFunction() throws CompileError {
         expect(TokenType.FN_KW);
         var nameToken = expect(TokenType.IDENT);
         List<Instruction> instructions;
         addSymbol(nameToken,NameType.Proc,TokenType.VOID_KW,this.deep,true,true,nameToken.getStartPos());
         expect(TokenType.L_PAREN);
-        if(check(TokenType.R_PAREN)==false)
+        if(!check(TokenType.R_PAREN))
             analyseFunctionParamList();
         expect(TokenType.R_PAREN);
         expect(TokenType.ARROW);
@@ -333,9 +333,8 @@ public final class Analyser {
         if(ty.getTokenType()!=TokenType.VOID_KW){
             this.table.setFuncReturn(nameToken.getValueString(),this.deep,nameToken.getStartPos(),ty.getTokenType());
         }
-        instructions=new ArrayList<>();
 
-        instructions.addAll(analyseBlockStmt());
+        instructions = new ArrayList<>(analyseBlockStmt());
         instructions.add(new Instruction(Operation.ret));
         this.table.addAllInstructions(instructions,this.deep+1);
     }
@@ -410,7 +409,7 @@ public final class Analyser {
         this.deep++;
         List<Instruction> instructions=new ArrayList<>();
         expect(TokenType.L_BRACE);
-        while (check(TokenType.R_BRACE)==false){
+        while (!check(TokenType.R_BRACE)){
             if(check(TokenType.LET_KW)||check(TokenType.CONST_KW)){
                 instructions.addAll(analyseDeclStmt());
             }
@@ -420,7 +419,7 @@ public final class Analyser {
             else if(check(TokenType.WHILE_KW)){
                 instructions.addAll(analyseWhileStmt());
             }//break continue
-            else if(check(TokenType.RETRUN_KW)){
+            else if(check(TokenType.RETURN_KW)){
                 instructions.addAll(analyseReturnStmt());
             } 
             else if(check(TokenType.L_BRACE)){
@@ -445,14 +444,14 @@ public final class Analyser {
         expect(TokenType.IF_KW);
         BooleanTree booleanTree;
         ConditionTree conditionTree=new ConditionTree();
-        booleanTree=analyseBlooeanExpr();
+        booleanTree=analyseBooleanExpr();
         booleanTree.setTrueInstructions(analyseBlockStmt());
         conditionTree.add(booleanTree);
         while(check(TokenType.ELSE_KW)){
             expect(TokenType.ELSE_KW);
             if(check(TokenType.IF_KW)){
                 expect(TokenType.IF_KW);
-                booleanTree=analyseBlooeanExpr();
+                booleanTree=analyseBooleanExpr();
                 booleanTree.setTrueInstructions(analyseBlockStmt());
                 conditionTree.add(booleanTree);
             }
@@ -470,14 +469,14 @@ public final class Analyser {
     private List<Instruction> analyseWhileStmt() throws CompileError {
         WhileTree whileTree=new WhileTree();
         expect(TokenType.WHILE_KW);
-        BooleanTree booleanTree=analyseBlooeanExpr();
+        BooleanTree booleanTree=analyseBooleanExpr();
         booleanTree.setTrueInstructions(analyseBlockStmt());
         whileTree.setBooleanTree(booleanTree);
         return whileTree.generate();
     }
 
     private List<Instruction> analyseReturnStmt() throws CompileError {
-        Token token=expect(TokenType.RETRUN_KW);
+        Token token=expect(TokenType.RETURN_KW);
         List<Instruction> instructions=new ArrayList<>();
         if(check(TokenType.SEMICOLON)==false){
             if (this.table.getNowFuncTable().getTokenType()==TokenType.VOID_KW)
@@ -584,7 +583,7 @@ public final class Analyser {
 
     private List<Instruction> analyseAssignExpr(Token nameToken) throws CompileError {
         List<Instruction> instructions=new ArrayList<>();
-        expcetNotConstant(nameToken);
+        expectNotConstant(nameToken);
         instructions.add(getVarOrParamAddress(nameToken));
         expect(TokenType.ASSIGN);
         instructions.addAll(analyseExpr());
@@ -618,8 +617,8 @@ public final class Analyser {
         var nameToken=expectLiteral();
         if(nameToken.getTokenType()==TokenType.STRING_LITERAL){
             addSymbol(nameToken,NameType.Var,TokenType.STRING_LITERAL,1,true,true,nameToken.getStartPos());
-            instructions.add(getStirngAddress(nameToken));
-        }else if(nameToken.getTokenType()==TokenType.UNIT_LITERAL){
+            instructions.add(getStringAddress(nameToken));
+        }else if(nameToken.getTokenType()==TokenType.UINT_LITERAL){
             instructions.add(new Instruction(Operation.push, (long)nameToken.getValue()));
         }
         return instructions;
@@ -627,17 +626,16 @@ public final class Analyser {
 
     private List<Instruction> analyseOperatorExpr() throws CompileError {
         List<Instruction> instructions=new ArrayList<>();
-        var opetator=next();
-        instructions.addAll(OperatorTree.getNewOperator(opetator.getTokenType()));
+        var operator=next();
+        instructions.addAll(OperatorTree.getNewOperator(operator.getTokenType()));
         instructions.addAll(analyseExpr());
         return instructions;
     }
 
-    private BooleanTree analyseBlooeanExpr() throws CompileError {
+    private BooleanTree analyseBooleanExpr() throws CompileError {
         BooleanTree booleanTree=new BooleanTree();
-        List<Instruction> instructions=new ArrayList<Instruction>();
         Instruction b;
-        instructions.addAll(analyseExpr());
+        List<Instruction> instructions = new ArrayList<Instruction>(analyseExpr());
         if(nextIf(TokenType.EQ)!=null){
             instructions.addAll(analyseExpr());
             //true 0 false 1 -1
@@ -698,3 +696,4 @@ public final class Analyser {
         return ty;
     }
 }
+
