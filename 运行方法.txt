@@ -1,0 +1,10 @@
+- 编译：
+gradle fatjar
+
+- 执行（生成词法）：-t
+java -jar ./build/libs/miniplc0java.jar -l -o output.txt input.txt
+
+- 执行（生成语法）：-l
+java -jar ./build/libs/miniplc0java.jar -l -o output.txt input.txt
+
+(output.txt和input.txt在项目根目录下，和.idea .gradle build那些文件夹同级)
