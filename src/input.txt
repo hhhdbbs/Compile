@@ -1,0 +1,4 @@
+fn main()->void{
+putstr("a\nb");
+putchar('\t');
+}
