@@ -176,9 +176,10 @@ public final class Analyser {
     }
 
     private Instruction getCharAddress(Token token) throws AnalyzeError {
-        if (!this.table.IsGlobal(token))
-            this.table.addGlobal(token,true,NameType.Char,null);
-        return new Instruction(Operation.push,(long)this.table.getGlobalId(token));
+     //   if (!this.table.IsGlobal(token))
+     //       this.table.addGlobal(token,true,NameType.Char,null);
+    //    return new Instruction(Operation.push,(long)this.table.getGlobalId(token));
+        return new Instruction(Operation.push,(long)((char)token.getValue()&0xff));
     }
     /**
      * 添加一个符号
@@ -324,6 +325,8 @@ public final class Analyser {
         instructions.addAll(analyseBlockStmt());
         instructions.add(new Instruction(Operation.ret));
         this.table.addAllInstructions(instructions,this.deep+1);
+        if (!this.table.isInitialized())
+            throw new AnalyzeError(ErrorCode.NotAllRoutesReturn, nameToken.getStartPos());
     }
 
     private List<Instruction> analyseDeclStmt() throws CompileError {
@@ -420,7 +423,13 @@ public final class Analyser {
             }//break continue
             else if(check(TokenType.RETRUN_KW)){
                 instructions.addAll(analyseReturnStmt());
-            } 
+            }
+            else if(check(TokenType.BREAK_KW)){
+                instructions.addAll(analyseBreakStmt());
+            }
+            else if(check(TokenType.CONTINUE_KW)){
+                instructions.addAll(analyseContinueStmt());
+            }
             else if(check(TokenType.L_BRACE)){
                 instructions.addAll(analyseBlockStmt());
             }
@@ -439,6 +448,21 @@ public final class Analyser {
         return instructions;
     }
 
+    private List<Instruction> analyseBreakStmt() throws CompileError {
+        List<Instruction> instructions=new ArrayList<>();
+        expect(TokenType.BREAK_KW);
+        instructions.add(new Instruction(Operation.break_kw,(long)0));
+        expect(TokenType.SEMICOLON);
+        return instructions;
+    }
+
+    private List<Instruction> analyseContinueStmt() throws CompileError {
+        List<Instruction> instructions=new ArrayList<>();
+        expect(TokenType.CONTINUE_KW);
+        instructions.add(new Instruction(Operation.continue_kw,(long)0));
+        expect(TokenType.SEMICOLON);
+        return instructions;
+    }
     private List<Instruction> analyseIfStmt() throws CompileError {
         expect(TokenType.IF_KW);
         BooleanTree booleanTree;
@@ -484,7 +508,9 @@ public final class Analyser {
                 throw new AnalyzeError(ErrorCode.WrongReturn, token.getStartPos());
             instructions.add(new Instruction(Operation.arga,(long)0));
             instructions.addAll(analyseExpr());
+            instructions.addAll(OperatorTree.addAllReset());
             instructions.add(new Instruction(Operation.store_64));
+            this.table.getFuncReturn();
         }
         instructions.add(new Instruction(Operation.ret));
         expect(TokenType.SEMICOLON);
@@ -532,17 +558,15 @@ public final class Analyser {
 
     private List<Instruction> analyseNegateExpr() throws CompileError {
         List<Instruction> instructions=new ArrayList<>();
-        instructions.add(new Instruction(Operation.push,(long)0));
-        expect(TokenType.MINUS);
+        Token token=expect(TokenType.MINUS);
+        instructions.addAll(OperatorTree.getNewOperator(TokenType.NEG));
         instructions.addAll(analyseExpr());
-        instructions.add(new Instruction(Operation.sub_i));
         return instructions;
     }
 
     private List<Instruction> analyseCallExpr(Token nameToken) throws CompileError {
         List<Instruction> instructions=new ArrayList<>();
         List<TokenType> tokenTypes=this.table.getFunctionParamsType(nameToken);
-
         instructions.addAll(this.table.addstackllocInstruction(nameToken.getValueString()));
 
         expect(TokenType.L_PAREN);
@@ -566,14 +590,18 @@ public final class Analyser {
 
     private List<Instruction> analyseCallParamList(List<TokenType> tokenTypes) throws CompileError {
         List<Instruction> instructions=new ArrayList<>();
+        instructions.addAll(OperatorTree.getNewOperator(TokenType.L_PAREN));
         instructions.addAll(analyseExpr());
-        instructions.addAll(OperatorTree.addAllReset());
+        instructions.addAll(OperatorTree.getNewOperator(TokenType.R_PAREN));
+      //  instructions.addAll(OperatorTree.addAllReset());
         int i;
         for(i=1;i<tokenTypes.size();i++){
             if(check(TokenType.COMMA)){
                 expect(TokenType.COMMA);
+                instructions.addAll(OperatorTree.getNewOperator(TokenType.L_PAREN));
                 instructions.addAll(analyseExpr());
-                instructions.addAll(OperatorTree.addAllReset());
+                instructions.addAll(OperatorTree.getNewOperator(TokenType.R_PAREN));
+            //    instructions.addAll(OperatorTree.addAllReset());
             }
             else{
                 Token nameToken=next();
@@ -590,6 +618,7 @@ public final class Analyser {
         instructions.add(getVarOrParamAddress(nameToken));
         expect(TokenType.ASSIGN);
         instructions.addAll(analyseExpr());
+        instructions.addAll(OperatorTree.addAllReset());
         instructions.add(new Instruction(Operation.store_64));
         declareSymbol(nameToken);
         return instructions;

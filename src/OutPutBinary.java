@@ -85,15 +85,16 @@ public class OutPutBinary {
     }
 
     private List<Byte> getValueByte(Token global) {
+        List<Byte> bytes=new ArrayList<>();
         if(global.getNameType()== NameType.Proc||global.getNameType()==NameType.String)
-            return String2bytes(global.getValueString());
+            bytes=String2bytes(global.getValueString());
         else if(global.getNameType()==NameType.Char)
-            return Char2bytes((char)global.getValue());
+            bytes= Char2bytes((char)global.getValue());
         else {
             if(global.getTy()== TokenType.INT_KW)
-                return long2bytes(8,0);
-            else return null;
+                bytes= long2bytes(8,0);
         }
+        return bytes;
     }
 
     private List<Byte> Char2bytes(char value) {

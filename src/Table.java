@@ -271,14 +271,24 @@ public class Table {
     }
 
     public void setFuncReturn(String valueString, int deep, Pos startPos, TokenType tokenType) {
-        get(valueString,deep,startPos).setTokenType(tokenType);
+        SymbolEntry symbolEntry=get(valueString,deep,startPos);
+        symbolEntry.setTokenType(tokenType);
+        symbolEntry.setInitialized(false);
         FunctionTable func=functionTables.get(functionTables.size()-1);
         func.setTokenType(tokenType);
         List<SymbolEntry> symbolEntries=func.getSymbolEntries();
-        for (SymbolEntry symbolEntry:symbolEntries)
-            symbolEntry.setOff(symbolEntry.getOff()+1);
+        for (SymbolEntry s:symbolEntries)
+            s.setOff(s.getOff()+1);
+    }
+    public void getFuncReturn() {
+        FunctionTable functionTable=this.functionTables.get(this.functionTables.size()-1);
+        get(functionTable.getName(),1,new Pos(-1,-1)).setInitialized(true);
     }
 
+    public boolean isInitialized() {
+        FunctionTable functionTable=this.functionTables.get(this.functionTables.size()-1);
+        return get(functionTable.getName(),1,new Pos(-1,-1)).isInitialized;
+    }
     public boolean checkOutFunc(String valueString) {
         for (String s:outFunc){
             if(s.equals(valueString))

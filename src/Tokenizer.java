@@ -146,6 +146,10 @@ public class Tokenizer {
             return new Token(TokenType.ELSE_KW,value,startPos,endPos);
         else if(value.equals("return"))
             return new Token(TokenType.RETRUN_KW,value,startPos,endPos);
+        else if(value.equals("break"))
+            return new Token(TokenType.BREAK_KW,value,startPos,endPos);
+        else if(value.equals("continue"))
+            return new Token(TokenType.CONTINUE_KW,value,startPos,endPos);
         else if(value.equals("int"))
             return new Token(TokenType.INT_KW,value,startPos,endPos);
         else if(value.equals("void"))

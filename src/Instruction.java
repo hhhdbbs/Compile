@@ -95,6 +95,8 @@ public class Instruction {
                 return String.format("%s  %s", this.opt,this.x);
             case not:
                 return String.format("%s", this.opt);
+            case neg_i:
+                return String.format("%s", this.opt);
             default:
                 return "ILL";
         }
@@ -144,6 +146,8 @@ public class Instruction {
                 return 0x48;
             case not:
                 return 0x2e;
+            case neg_i:
+                return 0x34;
             default:
                 return -1;
         }
